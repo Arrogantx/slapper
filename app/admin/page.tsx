@@ -97,30 +97,27 @@ export default function AdminPage() {
     }
   };
 
-  if (!isConnected) {
+  if (!isConnected || isAdmin === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        <p>Please connect your wallet.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-gray-900 to-black">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Checking Access...</h1>
+          <p className="text-gray-400">Please wait while we verify your admin status.</p>
+        </div>
       </div>
     );
   }
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        <p>Checking Access...</p>
-      </div>
-    );
-  }
-  
+
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        <p>Access Denied. You are not an admin.</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-black via-gray-900 to-black">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+          <p className="text-gray-400">You don't have permission to access this page.</p>
+        </div>
       </div>
     );
   }
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black text-white pt-32">
