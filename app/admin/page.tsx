@@ -22,12 +22,34 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [requests, setRequests] = useState<PresaleRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'success' | 'error'>('checking');
 
   useEffect(() => {
-    if (!address) return;
-
-    checkAdminStatus();
+    testConnection();
+    if (address) {
+      checkAdminStatus();
+    }
   }, [address]);
+
+  const testConnection = async () => {
+    try {
+      const { data, error } = await supabase.from('presale_requests').select('count').single();
+      if (error) throw error;
+      setConnectionStatus('success');
+      toast({
+        title: 'Database Connected',
+        description: 'Successfully connected to Supabase',
+      });
+    } catch (error) {
+      console.error('Database connection error:', error);
+      setConnectionStatus('error');
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to connect to the database',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const checkAdminStatus = async () => {
     if (!address) return;
@@ -43,7 +65,7 @@ export default function AdminPage() {
   
       console.log("Admin status response:", data);
       setIsAdmin(!!data);
-      if (data) fetchRequests(); // Only fetch requests if admin
+      if (data) fetchRequests();
     } catch (error) {
       console.error('Admin check failed:', error);
       setIsAdmin(false);
@@ -103,6 +125,9 @@ export default function AdminPage() {
         <div className="text-center text-white">
           <h1 className="text-2xl font-bold mb-4">Checking Access...</h1>
           <p className="text-gray-400">Please wait while we verify your admin status.</p>
+          {connectionStatus === 'checking' && <p className="text-yellow-400 mt-2">Testing database connection...</p>}
+          {connectionStatus === 'error' && <p className="text-red-400 mt-2">Database connection failed</p>}
+          {connectionStatus === 'success' && <p className="text-green-400 mt-2">Database connected successfully</p>}
         </div>
       </div>
     );

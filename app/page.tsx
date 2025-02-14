@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
 import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
+import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Hand, Twitter, Trophy, ChartBar, Coins, Gamepad2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { avalanche } from 'wagmi/chains';
+import { useToast } from '@/components/ui/use-toast';
 
 const features = [
   { icon: Gamepad2, title: 'PvP Slap Battles', description: 'Challenge other players to epic slap battles' },
@@ -34,48 +36,42 @@ const item = {
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { toast } = useToast();
 
-  const handleConnect = async (connector: 'metamask' | 'walletconnect') => {
+  const handleConnect = async (connectorType: 'core' | 'metamask' | 'walletconnect') => {
     try {
       if (isConnected) {
         await disconnect();
         return;
       }
-
-      const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '7ec549fb27241f9276063e001f9b482c';
-      
-      const selectedConnector = connector === 'metamask' 
-        ? new MetaMaskConnector({
-            chains: [avalanche],
-            options: {
-              shimDisconnect: true,
-              UNSTABLE_shimOnConnectSelectAccount: true,
-            },
-          })
-        : new WalletConnectConnector({
-            chains: [avalanche],
-            options: {
-              projectId,
-              metadata: {
-                name: 'AvaxSlap',
-                description: 'Web3 PvP Slap Battles on Avalanche',
-                url: 'https://avaxslap.com',
-                icons: ['https://avatars.githubusercontent.com/u/37784886'],
-              },
-            },
-          });
-
+  
+      const selectedConnector = connectors.find((c) => {
+        if (connectorType === 'metamask' && c.id === 'metaMask') return true;
+        if (connectorType === 'walletconnect' && c.id === 'walletConnect') return true;
+        if (connectorType === 'core' && c.id === 'injected') return true;
+        return false;
+      });
+  
+      if (!selectedConnector) {
+        throw new Error('Connector not found');
+      }
+  
       await connect({ connector: selectedConnector });
     } catch (error) {
       console.error('Connection error:', error);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to connect wallet. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black text-white">
-      {/* Navigation Bar */}
       <motion.nav 
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -103,6 +99,12 @@ export default function Home() {
           >
             {!isConnected ? (
               <>
+                <Button
+                  onClick={() => handleConnect('core')}
+                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
+                >
+                  Connect Core
+                </Button>
                 <Button
                   onClick={() => handleConnect('metamask')}
                   className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
@@ -135,7 +137,6 @@ export default function Home() {
           transition={{ duration: 0.8 }}
           className="text-center"
         >
-          {/* Hero Section */}
           <div className="relative mb-16">
             <motion.div
               className="absolute inset-0 flex items-center justify-center opacity-10"
@@ -182,7 +183,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Coming Soon Section */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -221,7 +221,6 @@ export default function Home() {
         </motion.div>
       </main>
 
-      {/* Footer */}
       <motion.footer 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
