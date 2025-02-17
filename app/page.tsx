@@ -1,14 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
-import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
-import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Hand, Twitter, Trophy, ChartBar, Coins, Gamepad2, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { avalanche } from 'wagmi/chains';
-import { useToast } from '@/components/ui/use-toast';
 
 const features = [
   { icon: Gamepad2, title: 'PvP Slap Battles', description: 'Challenge other players to epic slap battles' },
@@ -35,101 +28,8 @@ const item = {
 };
 
 export default function Home() {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { toast } = useToast();
-
-  const handleConnect = async (connectorType: 'core' | 'metamask' | 'walletconnect') => {
-    try {
-      if (isConnected) {
-        await disconnect();
-        return;
-      }
-  
-      const selectedConnector = connectors.find((c) => {
-        if (connectorType === 'metamask' && c.id === 'metaMask') return true;
-        if (connectorType === 'walletconnect' && c.id === 'walletConnect') return true;
-        if (connectorType === 'core' && c.id === 'injected') return true;
-        return false;
-      });
-  
-      if (!selectedConnector) {
-        throw new Error('Connector not found');
-      }
-  
-      await connect({ connector: selectedConnector });
-    } catch (error) {
-      console.error('Connection error:', error);
-      toast({
-        title: 'Connection Error',
-        description: 'Failed to connect wallet. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black text-white">
-      <motion.nav 
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="fixed w-full z-50 backdrop-blur-md bg-black/30 border-b border-gray-800/50"
-      >
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex items-center space-x-2"
-          >
-            <Hand size={32} className="text-[#E84142]" />
-            <span className="text-xl font-bold bg-gradient-to-r from-[#E84142] to-pink-500 text-transparent bg-clip-text">
-              AvaxSlap
-            </span>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex items-center space-x-4"
-          >
-            {!isConnected ? (
-              <>
-                <Button
-                  onClick={() => handleConnect('core')}
-                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
-                >
-                  Connect Core
-                </Button>
-                <Button
-                  onClick={() => handleConnect('metamask')}
-                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
-                >
-                  Connect MetaMask
-                </Button>
-                <Button
-                  onClick={() => handleConnect('walletconnect')}
-                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
-                >
-                  WalletConnect
-                </Button>
-              </>
-            ) : (
-              <Button
-                onClick={() => disconnect()}
-                className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
-              >
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </Button>
-            )}
-          </motion.div>
-        </div>
-      </motion.nav>
-
       <main className="container mx-auto px-4 pt-32 pb-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

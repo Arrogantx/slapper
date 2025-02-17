@@ -3,108 +3,145 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAccount } from 'wagmi';
-import { Hand, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { Hand } from 'lucide-react';
+import { Button } from './button';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
 import { useToast } from '@/components/ui/use-toast';
-
-// Define a type for the link
-type LinkType = {
-  href: string;
-  label: string;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
-};
+import { supabase } from '@/lib/supabase';
 
 export function Navigation() {
   const pathname = usePathname();
   const { address, isConnected } = useAccount();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [links, setLinks] = useState<LinkType[]>([
-    { href: '/', label: 'Home' },
-    { href: '/presale', label: 'Presale' },
-  ]);
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (address && !isCheckingAdmin) {
       checkAdminStatus();
-    } else {
-      setIsAdmin(false);
+    } else if (!address) {
+      setIsAdmin(null);
     }
-  }, [isConnected, address]);
+  }, [address, isCheckingAdmin]);
 
   const checkAdminStatus = async () => {
     if (!address) return;
-    
+  
     try {
-      console.log('Checking admin status for address:', address.toLowerCase());
-      const { data, error } = await supabase.rpc('is_admin', {
-        user_wallet: address.toLowerCase()
+      setIsCheckingAdmin(true);
+      const { data, error } = await supabase.rpc("is_admin", {
+        user_wallet: address.toLowerCase(),
       });
-      
-      if (error) {
-        console.error('Admin check error:', error);
-        throw error;
-      }
-
-      console.log('Admin check response:', data);
+  
+      if (error) throw error;
       setIsAdmin(!!data);
-
-      if (data) {
-        toast({
-          title: 'Admin Access Granted',
-          description: 'You have admin privileges.',
-        });
-
-        // Correct way to update state with functional setState
-        setLinks(prevLinks => [
-          ...prevLinks,
-          { href: '/admin', label: 'Admin', icon: Shield },
-        ]);
-      }
     } catch (error) {
       console.error('Admin check failed:', error);
       setIsAdmin(false);
+    } finally {
+      setIsCheckingAdmin(false);
+    }
+  };
+
+  const handleConnect = async (connectorType: 'core' | 'metamask' | 'walletconnect') => {
+    try {
+      if (isConnected) {
+        await disconnect();
+        return;
+      }
+  
+      const selectedConnector = connectors.find((c) => {
+        if (connectorType === 'metamask' && c.id === 'metaMask') return true;
+        if (connectorType === 'walletconnect' && c.id === 'walletConnect') return true;
+        if (connectorType === 'core' && c.id === 'injected') return true;
+        return false;
+      });
+  
+      if (!selectedConnector) {
+        throw new Error('Connector not found');
+      }
+  
+      await connect({ connector: selectedConnector });
+    } catch (error) {
+      console.error('Connection error:', error);
       toast({
-        title: 'Admin Check Failed',
-        description: 'Could not verify admin status.',
+        title: 'Connection Error',
+        description: 'Failed to connect wallet. Please try again.',
         variant: 'destructive',
       });
     }
   };
 
-  console.log('Current links:', links); // Debug: Check the links array
+  const links = [
+    { href: '/', label: 'Home' },
+    { href: '/presale', label: 'Presale' },
+    { href: '/deposit', label: 'Deposit' },
+    ...(isAdmin === true ? [{ href: '/admin', label: 'Admin' }] : []),
+  ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/30 border-b border-gray-800/50">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
+    <nav className="fixed w-full z-50 backdrop-blur-md bg-black/30 border-b border-gray-800/50">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-8">
             <Link href="/" className="flex items-center space-x-2">
               <Hand size={32} className="text-[#E84142]" />
               <span className="text-xl font-bold bg-gradient-to-r from-[#E84142] to-pink-500 text-transparent bg-clip-text">
                 AvaxSlap
               </span>
             </Link>
+            
+            <div className="hidden md:flex items-center space-x-6">
+              {links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-[#E84142]",
+                    pathname === link.href
+                      ? "text-[#E84142]"
+                      : "text-gray-400"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center space-x-8">
-            {links.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center space-x-1 text-sm font-medium transition-colors",
-                  pathname === href
-                    ? "text-[#E84142]"
-                    : "text-gray-400 hover:text-white"
-                )}
+          <div className="flex items-center space-x-4">
+            {!isConnected ? (
+              <>
+                <Button
+                  onClick={() => handleConnect('core')}
+                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
+                >
+                  Connect Core
+                </Button>
+                <Button
+                  onClick={() => handleConnect('metamask')}
+                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
+                >
+                  Connect MetaMask
+                </Button>
+                <Button
+                  onClick={() => handleConnect('walletconnect')}
+                  className="bg-gradient-to-r from-[#E84142] to-[#ff6b6b] hover:from-[#d13a3b] hover:to-[#e95f5f] text-white shadow-lg shadow-red-500/20 border border-red-500/20"
+                >
+                  WalletConnect
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => disconnect()}
+                className="bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
               >
-                {Icon && <Icon size={16} className="mr-1" />}
-                <span>{label}</span>
-              </Link>
-            ))}
+                {address?.slice(0, 6)}...{address?.slice(-4)}
+              </Button>
+            )}
           </div>
         </div>
       </div>
